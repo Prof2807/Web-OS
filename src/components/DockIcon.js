@@ -43,7 +43,7 @@ export const DockIcon = ({ icon, name }) => {
           }}}
         onContextMenu={(e) => e.preventDefault()} // also prevent menu on button
       >
-        <img src={icon} alt={name} height={30} width={30} />
+        <img src={icon} alt={name} height={30} width={30} draggable={false}/>
       </button>
 
       {showTooltip && (

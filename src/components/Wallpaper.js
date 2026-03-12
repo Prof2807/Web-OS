@@ -10,7 +10,8 @@ export default function Wallpaper({ src }) {
       style={{
         objectFit: "cover",
         pointerEvents: "none",
-        zIndex: -1 // keep wallpaper behind any desktop children
+        zIndex: -1, // keep wallpaper behind any desktop children
+        userSelect: "none"
       }}
     />
   )

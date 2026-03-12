@@ -1,9 +1,9 @@
 'use client'
 
 import Wallpaper from "./Wallpaper"
-import { useState } from "react"
+import { useState , forwardRef } from "react"
 
-export default function Desktop({ children }) {
+const Desktop = forwardRef(({ children , onMouseMove , onMouseUp}, ref) => {
 
   const handleLeftClick = (e) => {
     console.log("LMB", e.clientX, e.clientY)
@@ -12,10 +12,21 @@ export default function Desktop({ children }) {
 
   const handleRightClick = (e) => {
     e.preventDefault()
+
+    const menuWidth = 180
+    const menuHeight = 176
+
+    let x = e.clientX
+    let y = e.clientY
+
+    if (x + menuWidth > window.innerWidth) { x = window.innerWidth - menuWidth }
+
+    if (y + menuHeight > window.innerHeight) { y = window.innerHeight - menuHeight }
+
     setMenu({
         visible: true,
-        x: e.clientX,
-        y: e.clientY
+        x: x,
+        y: y
     })
     console.log("RMB", e.clientX, e.clientY)
   }
@@ -28,12 +39,16 @@ export default function Desktop({ children }) {
 
   return (
     <div
+    ref={ref}
       onClick={handleLeftClick}
       onContextMenu={handleRightClick}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
       style={{
         position: "relative",
         width: "100vw",
-        height: "92vh"
+        height: "92vh",
+        userSelect: "none"
       }}
     >
       <Wallpaper src="/Wallpaper.jpg" />
@@ -63,4 +78,6 @@ export default function Desktop({ children }) {
 
     </div>
   )
-}
+})
+
+export default Desktop
