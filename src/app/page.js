@@ -39,6 +39,30 @@ export default function Home() {
       gridY: 1
     })
 
+    IconManager.createIcon({
+      name: "Triangle",
+      type: "app",
+      iconPath: "/vercel.svg",
+      gridX: 0,
+      gridY: 2
+    })
+
+    IconManager.createIcon({
+      name: "Triangle",
+      type: "app",
+      iconPath: "/vercel.svg",
+      gridX: 0,
+      gridY: 3
+    })
+
+    IconManager.createIcon({
+      name: "Terminal",
+      type: "app",
+      iconPath: "/window.svg",
+      gridX: 0,
+      gridY: 4
+    })
+
     setIcons(IconManager.getIcons())
 
   }, [])
@@ -97,8 +121,8 @@ export default function Home() {
     setSnappedPreview({
       gridX,
       gridY,
-      x: gridX * GRID_SIZE + (GRID_SIZE - ICON_SIZE) / 2,
-      y: gridY * GRID_SIZE + (GRID_SIZE - ICON_SIZE) / 2
+      x: gridX * GRID_SIZE,
+      y: gridY * GRID_SIZE
     })
   }
 
@@ -164,6 +188,7 @@ export default function Home() {
                 key={icon.id}
                 icon={icon.iconPath}
                 name={icon.name}
+                size={ICON_SIZE}
                 x={x}
                 y={y}
                 onMouseDown={(e) => {
