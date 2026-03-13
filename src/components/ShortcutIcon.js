@@ -6,7 +6,7 @@ export default function ShortcutIcon({ icon, name, x, y, onMouseDown }) {
 
   return (
     <div
-      onMouseDown={(e) => {onMouseDown(name , e)}}
+      onMouseDown={onMouseDown}
       className=" max-h-[4.8vw] aspect-square flex flex-col items-center justify-center"
       style={{
         position: "absolute",
