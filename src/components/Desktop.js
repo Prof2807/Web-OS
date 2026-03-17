@@ -3,11 +3,22 @@
 import Wallpaper from "./Wallpaper"
 import { useState , forwardRef } from "react"
 
-const Desktop = forwardRef(({ children , onMouseMove , onMouseUp}, ref) => {
+import StorageManager from "@/systems/storage/StorageManager"
+
+const Desktop = forwardRef(({ children , onMouseMove , onMouseUp, onAction}, ref) => {
 
   const handleLeftClick = (e) => {
-    console.log("LMB", e.clientX, e.clientY)
     setMenu(prev => ({ ...prev, visible: false }))
+  }
+
+  const handleAction = (action) => {
+
+    setMenu(prev => ({...prev, visible: false}))
+
+    if (onAction) {
+      onAction(action)
+    } 
+
   }
 
   const handleRightClick = (e) => {
@@ -28,7 +39,6 @@ const Desktop = forwardRef(({ children , onMouseMove , onMouseUp}, ref) => {
         x: x,
         y: y
     })
-    console.log("RMB", e.clientX, e.clientY)
   }
 
   const [ menu , setMenu ] = useState({
@@ -69,10 +79,10 @@ const Desktop = forwardRef(({ children , onMouseMove , onMouseUp}, ref) => {
             width: "180px"
         }}
         >
-        <div className="p-2 hover:bg-gray-700 cursor-pointer">New File</div>
-        <div className="p-2 hover:bg-gray-700 cursor-pointer">New Folder</div>
-        <div className="p-2 hover:bg-gray-700 cursor-pointer">Open Terminal</div>
-        <div className="p-2 hover:bg-gray-700 cursor-pointer">Change Wallpaper</div>
+        <div onClick={() => handleAction("new-file")} className="p-2 hover:bg-gray-700 cursor-pointer">New File</div>
+        <div onClick={() => handleAction("new-folder")} className="p-2 hover:bg-gray-700 cursor-pointer">New Folder</div>
+        <div onClick={() => handleAction("open-terminal")} className="p-2 hover:bg-gray-700 cursor-pointer">Open Terminal</div>
+        <div onClick={() => handleAction("change-wallpaper")} className="p-2 hover:bg-gray-700 cursor-pointer">Change Wallpaper</div>
         </div>
     )}
 

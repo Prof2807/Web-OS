@@ -1,5 +1,7 @@
 'use client'
 
+
+import StorageManager from "../systems/storage/StorageManager.js"
 import Desktop from "../components/Desktop"
 import Dock from "../components/Dock"
 import ShortcutIcon from "@/components/ShortcutIcon"
@@ -12,60 +14,6 @@ export default function Home() {
 
   const desktopRef = useRef()
   const [ desktopSize , setdesktopSize ] = useState({ width: 0, height: 0 })
-
-  useEffect(() => {
-    const size = (6 * window.innerWidth) / 100
-    setGRID_SIZE(size)
-
-    if (desktopRef.current) {
-      const rect = desktopRef.current.getBoundingClientRect()
-
-      setdesktopSize({ width: rect.width, height: rect.height })
-    }
-
-    IconManager.createIcon({
-      name: "File Explorer",
-      type: "folder",
-      iconPath: "/file.svg",
-      gridX: 0,
-      gridY: 0
-    })
-
-    IconManager.createIcon({
-      name: "Browser",
-      type: "app",
-      iconPath: "/globe.svg",
-      gridX: 0,
-      gridY: 1
-    })
-
-    IconManager.createIcon({
-      name: "Triangle",
-      type: "app",
-      iconPath: "/vercel.svg",
-      gridX: 0,
-      gridY: 2
-    })
-
-    IconManager.createIcon({
-      name: "Triangle",
-      type: "app",
-      iconPath: "/vercel.svg",
-      gridX: 0,
-      gridY: 3
-    })
-
-    IconManager.createIcon({
-      name: "Terminal",
-      type: "app",
-      iconPath: "/window.svg",
-      gridX: 0,
-      gridY: 4
-    })
-
-    setIcons(IconManager.getIcons())
-
-  }, [])
 
   const ICON_SIZE = GRID_SIZE * 0.8
 
@@ -108,15 +56,7 @@ export default function Home() {
     gridX = Math.max(0, Math.min(gridX, maxCols))
     gridY = Math.max(0, Math.min(gridY, maxRows))
 
-    console.log("Dragging " + draggingIconId);
-    
-
     if (isNaN(gridX) || isNaN(gridY)) return
-
-    console.log("Computed Grid: ", gridX, gridY);
-    console.log("Computed Pixels: ", gridX * GRID_SIZE,gridY * GRID_SIZE);
-    
-    
 
     setSnappedPreview({
       gridX,
@@ -135,6 +75,11 @@ export default function Home() {
       snappedPreview.gridX,
       snappedPreview.gridY
     )
+
+    StorageManager.updateItem(draggingIconId, {
+      gridX: snappedPreview.gridX,
+      gridY: snappedPreview.gridY
+    })
 
     setIcons(IconManager.getIcons())
 
@@ -157,18 +102,70 @@ export default function Home() {
     }
   }, [draggingIconId, dragOffset, snappedPreview])
 
-  useEffect(() => {
-    console.log("Preview updated: ", snappedPreview);
-    
-  }, [snappedPreview])
+  const handleDesktopAction = (action) => {
+
+    if (action === 'new-folder') {
+      const id = "folder-" + crypto.randomUUID()
+
+      const newItem = {
+        id,
+        type: 'folder',
+        name: "New Folder"
+      }
+
+      StorageManager.addItem("root", newItem)
+
+      IconManager.createIcon({
+        id,
+        name: newItem.name,
+        type: "folder",
+        iconPath: "/folder_icon.png",
+        gridX: 0,
+        gridY: 0
+      })
+
+      setIcons(IconManager.getIcons())
+    }
+
+    if (action === 'new-file') {
+      const id = crypto.randomUUID()
+
+      const newItem = {
+        id,
+        type: "file",
+        name: "Untitled"
+      }
+
+      StorageManager.addItem("root", newItem)
+
+      IconManager.createIcon({
+        id,
+        type: "file",
+        name: newItem.name,
+        iconPath: "/file_icon.svg",
+        gridX: 0,
+        gridY: 0
+      })
+
+      setIcons(IconManager.getIcons())
+    }
+
+    if (action === "open-terminal") {
+      console.log("Opened Terminal");
+    }
+
+    if (action === "change-wallpaper") {
+      console.log("Changed Wallpaper");
+    }
+
+  }
 
   return (
     <>
       <div className="h-screen w-screen overflow-hidden">
         <Desktop 
           ref={desktopRef}
-          // onMouseMove={handleMouseMove}
-          // onMouseUp={handleMouseUp}  
+          onAction={handleDesktopAction}
         >
 
           {icons.map(icon => {
@@ -180,8 +177,6 @@ export default function Home() {
               x = snappedPreview.x + (GRID_SIZE - ICON_SIZE) / 2
               y = snappedPreview.y + (GRID_SIZE - ICON_SIZE) / 2
             }
-
-            console.log(`Rendering icon ${icon.name} at grid (${icon.gridX}, ${icon.gridY}) with pixel position (${x}, ${y})`)
 
             return (
               <ShortcutIcon
@@ -199,22 +194,65 @@ export default function Home() {
             )
           })}
 
-            {console.log("Redndering preview check: " , snappedPreview)}
+          {snappedPreview && (
+            <div
+              style={{
+                position: "absolute",
+                left: snappedPreview.x,
+                top: snappedPreview.y,
+                width: GRID_SIZE,
+                height: GRID_SIZE,
+                border: " 2px solid rgba(255,255,255,0.6) ",
+                background: "rgba(255,255,255,0.1)",
+                pointerEvents: "none"
+              }}
+            />
+          )}
 
-            {snappedPreview && (
-              <div
-                style={{
-                  position: "absolute",
-                  left: snappedPreview.x,
-                  top: snappedPreview.y,
-                  width: GRID_SIZE,
-                  height: GRID_SIZE,
-                  border: " 2px solid rgba(255,255,255,0.6) ",
-                  background: "rgba(255,255,255,0.1)",
-                  pointerEvents: "none"
-                }}
-              />
-            )}
+          {useEffect(() => {
+
+            const size = (6 * window.innerWidth) / 100
+            setGRID_SIZE(size)
+
+            if (desktopRef.current) {
+              const rect = desktopRef.current.getBoundingClientRect()
+              setdesktopSize({ width: rect.width, height: rect.height })
+            }
+
+            StorageManager.addItem("root", {
+              id: "file-explorer",
+              type: "folder",
+              name: "File Explorer"
+            })
+
+            StorageManager.addItem("root", {
+              id: "browser",
+              type: "app",
+              name: "Ace"
+            })
+
+            StorageManager.addItem("root", {
+              id: "folder1",
+              type: "folder",
+              name: "Code"
+            })
+
+            const items = StorageManager.getChildren("root")
+
+            items.forEach((item, index) => {
+              IconManager.createIcon({
+                id: item.id ,
+                name: item.name,
+                type: item.type,
+                iconPath: item.type === "folder" ? "/folder_icon.png" : "/window.svg",
+                gridX: 0,
+                gridY: index
+              })
+            })
+
+            setIcons(IconManager.getIcons())
+
+          }, [])}
 
         </Desktop>
 

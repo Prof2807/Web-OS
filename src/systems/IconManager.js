@@ -13,7 +13,9 @@ const IconManager = {
             gridY: iconData.gridY
         }
         if (this.isCellOccupied(icon.gridX, icon.gridY)) {
-            throw new Error(`Cell (${icon.gridX}, ${icon.gridY}) is already occupied by another icon.`)
+            const newCoords = this.findNextFreeCell(icon.gridX,icon.gridY)
+            icon.gridX = newCoords.gridX
+            icon.gridY = newCoords.gridY
         }
 
         icons.push(icon)
