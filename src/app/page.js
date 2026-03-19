@@ -6,6 +6,7 @@ import Desktop from "../components/Desktop"
 import Dock from "../components/Dock"
 import ShortcutIcon from "@/components/ShortcutIcon"
 import IconManager from "@/systems/IconManager"
+import { contextMenus } from "@/systems/contextMenuConfig.js"
 import { useState , useEffect , useRef } from "react"
 
 export default function Home() {
@@ -88,6 +89,9 @@ export default function Home() {
     setSnappedPreview(null)
   }
 
+  const [ renamingId , setRenamingId ] = useState(null)
+  const [ renameValue , setRenameValue ] = useState("")
+
   useEffect(() => {
 
     const move = (e) => handleMouseMove(e)
@@ -101,6 +105,64 @@ export default function Home() {
       window.removeEventListener("mouseup", up)
     }
   }, [draggingIconId, dragOffset, snappedPreview])
+
+  useEffect(() => {
+    const size = (6 * window.innerWidth) / 100
+    setGRID_SIZE(size)
+
+    if (desktopRef.current) {
+      const rect = desktopRef.current.getBoundingClientRect()
+      setdesktopSize({ width: rect.width, height: rect.height })
+    }
+
+    StorageManager.addItem("root", {
+      id: "file-explorer",
+      type: "folder",
+      name: "File Explorer"
+    })
+
+    StorageManager.addItem("root", {
+      id: "browser",
+      type: "app",
+      name: "Ace"
+    })
+
+    StorageManager.addItem("root", {
+      id: "folder1",
+      type: "folder",
+      name: "Code"
+    })
+
+    const items = StorageManager.getChildren("root")
+
+    items.forEach((item, index) => {
+      IconManager.createIcon({
+        id: item.id,
+        name: item.name,
+        type: item.type,
+        iconPath: item.type === "folder" ? "/folder_icon.png" : "/window.svg",
+        gridX: 0,
+        gridY: index
+      })
+    })
+
+    setIcons(IconManager.getIcons())
+  }, [])
+
+  const handleRenameSubmit = () => {
+    if (!renamingId) return
+
+    const newName = renameValue.trim()
+    if (!newName) return
+
+    StorageManager.updateItem(renamingId, {name: newName})
+    IconManager.renameIcon(renamingId, newName)
+
+    setIcons(IconManager.getIcons())
+
+    setRenamingId(null)
+    setRenameValue("")
+  }
 
   const handleDesktopAction = (action) => {
 
@@ -125,6 +187,33 @@ export default function Home() {
       })
 
       setIcons(IconManager.getIcons())
+
+      setTimeout(()  => {
+        setRenamingId(id)
+        setRenameValue(newItem.name)
+      }, 0)
+    }
+
+    if (action === "delete") {
+      if (!contextMenu.target) return
+
+      const id = contextMenu.target.id
+
+      StorageManager.removeItem(id)
+      IconManager.deleteIcon(id)
+
+      setIcons(IconManager.getIcons())
+    }
+
+    if (action === "rename") {
+      if (!contextMenu.target) return
+      
+      const id = contextMenu.target.id
+
+      setRenamingId(id)
+      setRenameValue(contextMenu.target.name)
+
+      setContextMenu(prev => ({...prev , visible: false}))
     }
 
     if (action === 'new-file') {
@@ -148,6 +237,11 @@ export default function Home() {
       })
 
       setIcons(IconManager.getIcons())
+
+      setTimeout(()  => {
+        setRenamingId(id)
+        setRenameValue(newItem.name)
+      }, 0)
     }
 
     if (action === "open-terminal") {
@@ -160,13 +254,124 @@ export default function Home() {
 
   }
 
+
+    const [ contextMenu , setContextMenu ] = useState({
+        visible: false,
+        x: 0,
+        y: 0,
+        type: null,
+        target: null
+    })
+
+    const handleContextMenu = (e, target) => {
+        e.preventDefault()
+
+        const type = target ? target.type : 'desktop'
+
+        const menuWidth = 180
+        const menuHeight = 16 + ( (contextMenus[type]?.length || 0) * 40 )
+
+        let x = e.clientX
+        let y = e.clientY
+
+        if (x + menuWidth > window.innerWidth) { x = window.innerWidth - menuWidth }
+
+        if (y + menuHeight > window.innerHeight) { y = window.innerHeight - menuHeight }
+
+        setContextMenu({
+            visible: true,
+            x: x,
+            y: y,
+            type: type,
+            target: target
+        })
+    }
+    
+    const onCloseContextMenu = () => {
+      setContextMenu(prev => ({
+        ...prev,
+        visible: false
+      }))
+    }
+
+    useEffect(() => {
+
+      const size = (6 * window.innerWidth) / 100
+      setGRID_SIZE(size)
+
+      if (desktopRef.current) {
+        const rect = desktopRef.current.getBoundingClientRect()
+        setdesktopSize({ width: rect.width, height: rect.height })
+      }
+
+      StorageManager.addItem("root", {
+        id: "file-explorer",
+        type: "folder",
+        name: "File Explorer"
+      })
+
+      StorageManager.addItem("root", {
+        id: "browser",
+        type: "app",
+        name: "Ace"
+      })
+
+      StorageManager.addItem("root", {
+        id: "folder1",
+        type: "folder",
+        name: "Code"
+      })
+
+      const items = StorageManager.getChildren("root")
+
+      items.forEach((item, index) => {
+        IconManager.createIcon({
+          id: item.id ,
+          name: item.name,
+          type: item.type,
+          iconPath: item.type === "folder" ? "/folder_icon.png" : "/window.svg",
+          gridX: 0,
+          gridY: index
+        })
+      })
+
+      setIcons(IconManager.getIcons())
+
+    }, [])
+
   return (
     <>
       <div className="h-screen w-screen overflow-hidden">
         <Desktop 
           ref={desktopRef}
           onAction={handleDesktopAction}
+          onContextMenu={handleContextMenu}
+          onClick={onCloseContextMenu}
         >
+          {contextMenu.visible && (
+            <div
+              style={{
+                position: 'absolute',
+                top: contextMenu.y,
+                left: contextMenu.x,
+                background: "#222",
+                color: "white",
+                padding: "8px",
+                borderRadius: "6px",
+                width: `180px`
+              }}
+            >
+              {contextMenus[contextMenu.type]?.map((item) => (
+                <div
+                  key={item.action}
+                  onClick={() => handleDesktopAction(item.action)}
+                  className="p-2 hover:bg-gray-700 cursor-pointer"
+                >
+                  {item.label}
+                </div>
+              ))}
+            </div>
+          )}
 
           {icons.map(icon => {
 
@@ -190,6 +395,14 @@ export default function Home() {
                   e.stopPropagation()
                   handleMouseDown(icon.id , e) 
                 }}
+                onContextMenu={(e) => {
+                  e.stopPropagation()
+                  handleContextMenu(e, icon)
+                }}
+                isRenaming={renamingId === icon.id}        
+                renameValue={renameValue}                  
+                setRenameValue={setRenameValue}            
+                onRenameSubmit={handleRenameSubmit}        
               />
             )
           })}
@@ -208,52 +421,6 @@ export default function Home() {
               }}
             />
           )}
-
-          {useEffect(() => {
-
-            const size = (6 * window.innerWidth) / 100
-            setGRID_SIZE(size)
-
-            if (desktopRef.current) {
-              const rect = desktopRef.current.getBoundingClientRect()
-              setdesktopSize({ width: rect.width, height: rect.height })
-            }
-
-            StorageManager.addItem("root", {
-              id: "file-explorer",
-              type: "folder",
-              name: "File Explorer"
-            })
-
-            StorageManager.addItem("root", {
-              id: "browser",
-              type: "app",
-              name: "Ace"
-            })
-
-            StorageManager.addItem("root", {
-              id: "folder1",
-              type: "folder",
-              name: "Code"
-            })
-
-            const items = StorageManager.getChildren("root")
-
-            items.forEach((item, index) => {
-              IconManager.createIcon({
-                id: item.id ,
-                name: item.name,
-                type: item.type,
-                iconPath: item.type === "folder" ? "/folder_icon.png" : "/window.svg",
-                gridX: 0,
-                gridY: index
-              })
-            })
-
-            setIcons(IconManager.getIcons())
-
-          }, [])}
-
         </Desktop>
 
         <div className="h-[8vh]">

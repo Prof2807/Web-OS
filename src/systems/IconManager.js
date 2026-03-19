@@ -1,5 +1,5 @@
 
-const icons = []
+let icons = []
 
 const IconManager = {
 
@@ -19,6 +19,24 @@ const IconManager = {
         }
 
         icons.push(icon)
+    },
+
+    deleteIcon(id) {
+        const exits = icons.some(icon => icon.id === id)
+        if (!exits) return false
+        
+        icons = icons.filter(icon => icon.id !== id)
+        return true
+    },
+
+    renameIcon(id, newName) {
+        const icon = icons.find(i => i.id === id)
+        if (!icon) return false
+
+        if (typeof newName !== "string" || newName.trim() === "") return false
+
+        icon.name = newName.trim()
+        return true
     },
 
     findNextFreeCell(startX, startY) {

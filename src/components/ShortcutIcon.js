@@ -2,11 +2,12 @@
 
 import { useState , useEffect } from "react"
 
-export default function ShortcutIcon({ icon, name, x, y, size, onMouseDown }) {
+export default function ShortcutIcon({ icon, name, x, y, size, onMouseDown, onContextMenu, isRenaming, renameValue, setRenameValue, onRenameSubmit }) {
 
   return (
     <div
       onMouseDown={onMouseDown}
+      onContextMenu={onContextMenu}
       className="flex flex-col items-center justify-center"
       style={{
         position: "absolute",
@@ -24,9 +25,27 @@ export default function ShortcutIcon({ icon, name, x, y, size, onMouseDown }) {
         draggable="false"
       />
       {/* label below the image; full width ensures truncate works */}
-      <span className="text-xs text-white block w-full truncate whitespace-nowrap mt-1 text-center text-border:-1 text-border-gray-800">
+      
+      {isRenaming ? (
+        <input
+          autoFocus
+          value={renameValue}
+          onChange={(e) => setRenameValue(e.target.value)}
+          onBlur={onRenameSubmit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onRenameSubmit()
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+          style={{
+            width: "100%",
+            textAlign: "center"
+          }}
+        />
+      ) : (
+        <span className="text-xs text-white block w-full truncate whitespace-nowrap mt-1 text-center text-border:-1 text-border-gray-800">
         {name}
       </span>
+      )}
     </div>
   )
 }
