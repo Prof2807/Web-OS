@@ -5,15 +5,13 @@ import { useState , forwardRef } from "react"
 import { contextMenus } from "@/systems/contextMenuConfig"
 import ConextMenu from "./ContextMenu"
 
-const Desktop = forwardRef(({ children , onMouseMove , onMouseUp, onAction, onContextMenu, onClick}, ref) => {
+const Desktop = forwardRef(({ children , onMouseMove , onMouseUp, onAction, onContextMenu, onClick, onStartSelection}, ref) => {
 
   const handleLeftClick = (e) => {
     if (onClick) onClick()
   }
 
   const handleAction = (action) => {
-
-    
 
     if (onAction) {
       onAction(action)
@@ -36,6 +34,15 @@ const Desktop = forwardRef(({ children , onMouseMove , onMouseUp, onAction, onCo
       onContextMenu={handleRightClick}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
+      onMouseDown={(e) => {
+        if (e.button !== 0) return
+
+        if (e.target !== e.currentTarget) return
+
+        if (onStartSelection) {
+          onStartSelection(e)
+        }
+      }}
       style={{
         position: "relative",
         width: "100vw",

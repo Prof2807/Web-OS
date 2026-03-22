@@ -7,24 +7,30 @@ import Dock from "../components/Dock"
 import ShortcutIcon from "@/components/ShortcutIcon"
 import IconManager from "@/systems/IconManager"
 import { contextMenus } from "@/systems/contextMenuConfig.js"
-import { useState , useEffect , useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 
 export default function Home() {
 
-  const [ GRID_SIZE , setGRID_SIZE ] = useState(80)
+  const [GRID_SIZE, setGRID_SIZE] = useState(80)
 
   const desktopRef = useRef()
-  const [ desktopSize , setdesktopSize ] = useState({ width: 0, height: 0 })
+  const [desktopSize, setdesktopSize] = useState({ width: 0, height: 0 })
 
   const ICON_SIZE = GRID_SIZE * 0.8
 
-  const [ draggingIconId , setDraggingIconId ] = useState(null)
-  const [ dragOffset , setDragOffset ] = useState({ x: 0, y: 0 })
-  const [ snappedPreview , setSnappedPreview ] = useState(null)
+  const [draggingIconId, setDraggingIconId] = useState(null)
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const [snappedPreview, setSnappedPreview] = useState(null)
   const [icons, setIcons] = useState([])
   const draggingRef = useRef(null)
-    
-  const handleMouseDown = (id , e) => {
+
+  const [isSelection, setIsSelection] = useState(false)
+  const [selectiontart, setSelectionStart] = useState({ x: 0, y: 0 })
+  const [selectionBox, setSelectionBox] = useState(null)
+  const [selectedIcons, setSelectedIcons] = useState([])
+
+  const handleMouseDown = (id, e) => {
+    if (isContextMenuOpen) return
     draggingRef.current = id
     setDraggingIconId(id)
 
@@ -44,6 +50,8 @@ export default function Home() {
   const handleMouseMove = (e) => {
     if (!draggingRef.current) return
     if (!GRID_SIZE) return
+    if (isContextMenuOpen) return
+
 
     const iconX = e.clientX - dragOffset.x
     const iconY = e.clientY - dragOffset.y
@@ -59,6 +67,24 @@ export default function Home() {
 
     if (isNaN(gridX) || isNaN(gridY)) return
 
+    const currentIcon = icons.find(i => i.id === draggingRef.current)
+    if (!currentIcon) return
+
+    if (currentIcon.gridX !== gridX || currentIcon.gridY !== gridY) {
+
+      if (IconManager.isCellOccupied(gridX, gridY)) return
+
+      IconManager.updateIconPosition(currentIcon.id, gridX, gridY)
+
+      setIcons([...IconManager.getIcons()])
+
+      StorageManager.updateItem(currentIcon.id, {
+        gridX,
+        gridY
+      })
+
+    }
+
     setSnappedPreview({
       gridX,
       gridY,
@@ -68,29 +94,18 @@ export default function Home() {
   }
 
   const handleMouseUp = () => {
-    
+
     if (!draggingRef.current || !snappedPreview) return
 
-    IconManager.updateIconPosition(
-      draggingIconId,
-      snappedPreview.gridX,
-      snappedPreview.gridY
-    )
-
-    StorageManager.updateItem(draggingIconId, {
-      gridX: snappedPreview.gridX,
-      gridY: snappedPreview.gridY
-    })
-
-    setIcons(IconManager.getIcons())
+    setIcons([...IconManager.getIcons()])
 
     setDraggingIconId(null)
     draggingRef.current = null
     setSnappedPreview(null)
   }
 
-  const [ renamingId , setRenamingId ] = useState(null)
-  const [ renameValue , setRenameValue ] = useState("")
+  const [renamingId, setRenamingId] = useState(null)
+  const [renameValue, setRenameValue] = useState("")
 
   useEffect(() => {
 
@@ -146,7 +161,7 @@ export default function Home() {
       })
     })
 
-    setIcons(IconManager.getIcons())
+    setIcons([...IconManager.getIcons()])
   }, [])
 
   const handleRenameSubmit = () => {
@@ -155,10 +170,10 @@ export default function Home() {
     const newName = renameValue.trim()
     if (!newName) return
 
-    StorageManager.updateItem(renamingId, {name: newName})
+    StorageManager.updateItem(renamingId, { name: newName })
     IconManager.renameIcon(renamingId, newName)
 
-    setIcons(IconManager.getIcons())
+    setIcons([...IconManager.getIcons()])
 
     setRenamingId(null)
     setRenameValue("")
@@ -186,9 +201,9 @@ export default function Home() {
         gridY: 0
       })
 
-      setIcons(IconManager.getIcons())
+      setIcons([...IconManager.getIcons()])
 
-      setTimeout(()  => {
+      setTimeout(() => {
         setRenamingId(id)
         setRenameValue(newItem.name)
       }, 0)
@@ -202,18 +217,18 @@ export default function Home() {
       StorageManager.removeItem(id)
       IconManager.deleteIcon(id)
 
-      setIcons(IconManager.getIcons())
+      setIcons([...IconManager.getIcons()])
     }
 
     if (action === "rename") {
       if (!contextMenu.target) return
-      
+
       const id = contextMenu.target.id
 
       setRenamingId(id)
       setRenameValue(contextMenu.target.name)
 
-      setContextMenu(prev => ({...prev , visible: false}))
+      setContextMenu(prev => ({ ...prev, visible: false }))
     }
 
     if (action === 'new-file') {
@@ -236,9 +251,9 @@ export default function Home() {
         gridY: 0
       })
 
-      setIcons(IconManager.getIcons())
+      setIcons([...IconManager.getIcons()])
 
-      setTimeout(()  => {
+      setTimeout(() => {
         setRenamingId(id)
         setRenameValue(newItem.name)
       }, 0)
@@ -255,98 +270,79 @@ export default function Home() {
   }
 
 
-    const [ contextMenu , setContextMenu ] = useState({
-        visible: false,
-        x: 0,
-        y: 0,
-        type: null,
-        target: null
+  const [contextMenu, setContextMenu] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    type: null,
+    target: null
+  })
+  const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
+
+  const handleContextMenu = (e, target) => {
+    e.preventDefault()
+
+    setDraggingIconId(null)
+    draggingRef.current = null
+    setSnappedPreview(null)
+
+    const type = target ? target.type : 'desktop'
+
+    const menuWidth = 180
+    const menuHeight = 16 + ((contextMenus[type]?.length || 0) * 40)
+
+    let x = e.clientX
+    let y = e.clientY
+
+    if (x + menuWidth > window.innerWidth) { x = window.innerWidth - menuWidth }
+
+    if (y + menuHeight > window.innerHeight) { y = window.innerHeight - menuHeight }
+
+    setContextMenu({
+      visible: true,
+      x: x,
+      y: y,
+      type: type,
+      target: target
+    })
+    setIsContextMenuOpen(true)
+  }
+
+  const onCloseContextMenu = () => {
+    setContextMenu(prev => ({
+      ...prev,
+      visible: false
+    }))
+    setIsContextMenuOpen(false)
+  }
+
+  const onStartSelection = (e) => {
+
+    if (isContextMenuOpen) return
+
+    setIsSelection(true)
+    setSelectionStart({x: e.clientX, y: e.clientY})
+
+    setSelectionBox({
+      x: e.clientX,
+      y: e.clientY,
+      width: 0,
+      height: 0
     })
 
-    const handleContextMenu = (e, target) => {
-        e.preventDefault()
+    setSelectedIcons([])
 
-        const type = target ? target.type : 'desktop'
-
-        const menuWidth = 180
-        const menuHeight = 16 + ( (contextMenus[type]?.length || 0) * 40 )
-
-        let x = e.clientX
-        let y = e.clientY
-
-        if (x + menuWidth > window.innerWidth) { x = window.innerWidth - menuWidth }
-
-        if (y + menuHeight > window.innerHeight) { y = window.innerHeight - menuHeight }
-
-        setContextMenu({
-            visible: true,
-            x: x,
-            y: y,
-            type: type,
-            target: target
-        })
-    }
-    
-    const onCloseContextMenu = () => {
-      setContextMenu(prev => ({
-        ...prev,
-        visible: false
-      }))
-    }
-
-    useEffect(() => {
-
-      const size = (6 * window.innerWidth) / 100
-      setGRID_SIZE(size)
-
-      if (desktopRef.current) {
-        const rect = desktopRef.current.getBoundingClientRect()
-        setdesktopSize({ width: rect.width, height: rect.height })
-      }
-
-      StorageManager.addItem("root", {
-        id: "file-explorer",
-        type: "folder",
-        name: "File Explorer"
-      })
-
-      StorageManager.addItem("root", {
-        id: "browser",
-        type: "app",
-        name: "Ace"
-      })
-
-      StorageManager.addItem("root", {
-        id: "folder1",
-        type: "folder",
-        name: "Code"
-      })
-
-      const items = StorageManager.getChildren("root")
-
-      items.forEach((item, index) => {
-        IconManager.createIcon({
-          id: item.id ,
-          name: item.name,
-          type: item.type,
-          iconPath: item.type === "folder" ? "/folder_icon.png" : "/window.svg",
-          gridX: 0,
-          gridY: index
-        })
-      })
-
-      setIcons(IconManager.getIcons())
-
-    }, [])
+  }
 
   return (
     <>
       <div className="h-screen w-screen overflow-hidden">
-        <Desktop 
+        <Desktop
           ref={desktopRef}
           onAction={handleDesktopAction}
           onContextMenu={handleContextMenu}
           onClick={onCloseContextMenu}
+          onStartSelection={onStartSelection}
         >
           {contextMenu.visible && (
             <div
@@ -393,16 +389,16 @@ export default function Home() {
                 y={y}
                 onMouseDown={(e) => {
                   e.stopPropagation()
-                  handleMouseDown(icon.id , e) 
+                  handleMouseDown(icon.id, e)
                 }}
                 onContextMenu={(e) => {
                   e.stopPropagation()
                   handleContextMenu(e, icon)
                 }}
-                isRenaming={renamingId === icon.id}        
-                renameValue={renameValue}                  
-                setRenameValue={setRenameValue}            
-                onRenameSubmit={handleRenameSubmit}        
+                isRenaming={renamingId === icon.id}
+                renameValue={renameValue}
+                setRenameValue={setRenameValue}
+                onRenameSubmit={handleRenameSubmit}
               />
             )
           })}

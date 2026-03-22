@@ -1,8 +1,17 @@
 'use client'
 
-import { useState , useEffect } from "react"
+import { useState , useRef, useEffect } from "react"
 
 export default function ShortcutIcon({ icon, name, x, y, size, onMouseDown, onContextMenu, isRenaming, renameValue, setRenameValue, onRenameSubmit }) {
+
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    if (isRenaming && inputRef.current) {
+      inputRef.current.focus()
+      inputRef.current.select()
+    }
+  }, [isRenaming])
 
   return (
     <div
@@ -28,6 +37,7 @@ export default function ShortcutIcon({ icon, name, x, y, size, onMouseDown, onCo
       
       {isRenaming ? (
         <input
+          ref={inputRef}
           autoFocus
           value={renameValue}
           onChange={(e) => setRenameValue(e.target.value)}
