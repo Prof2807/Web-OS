@@ -24,8 +24,8 @@ export default function Home() {
   const [icons, setIcons] = useState([])
   const draggingRef = useRef(null)
 
-  const [isSelection, setIsSelection] = useState(false)
-  const [selectiontart, setSelectionStart] = useState({ x: 0, y: 0 })
+  const [isSelecting, setIsSelecting] = useState(false)
+  const [selectionStart, setSelectionStart] = useState({ x: 0, y: 0 })
   const [selectionBox, setSelectionBox] = useState(null)
   const [selectedIcons, setSelectedIcons] = useState([])
 
@@ -48,9 +48,45 @@ export default function Home() {
   }
 
   const handleMouseMove = (e) => {
+
+    if (isSelecting) {
+
+      const x1 = selectionStart.x
+      const y1 = selectionStart.y
+      const x2 = e.clientX
+      const y2 = e.clientY
+
+      const box = {
+        x: Math.min(x1, x2),
+        y: Math.min(y1, y2),
+        width: Math.abs(x2 - x1),
+        height: Math.abs(y2 - y1)
+      }
+
+      setSelectionBox(box)
+
+      const selected = icons.filter(icon => {
+        const iconX = icon.gridX * GRID_SIZE
+        const iconY = icon.gridY * GRID_SIZE
+
+        return (
+          iconX < box.x + box.width &&
+          iconX + GRID_SIZE > box.x &&
+          iconY < box.y + box.height &&
+          iconY + GRID_SIZE > box.y
+        )
+      })
+
+      setSelectedIcons(selected.map(i => i.id))
+
+      return
+
+    }
+
     if (!draggingRef.current) return
     if (!GRID_SIZE) return
     if (isContextMenuOpen) return
+
 
 
     const iconX = e.clientX - dragOffset.x
@@ -95,6 +131,12 @@ export default function Home() {
 
   const handleMouseUp = () => {
 
+    if (isSelecting) {
+      setIsSelecting(false)
+      setSelectionBox(null)
+      return
+    }
+
     if (!draggingRef.current || !snappedPreview) return
 
     setIcons([...IconManager.getIcons()])
@@ -119,7 +161,7 @@ export default function Home() {
       window.removeEventListener("mousemove", move)
       window.removeEventListener("mouseup", up)
     }
-  }, [draggingIconId, dragOffset, snappedPreview])
+  }, [draggingIconId, dragOffset, snappedPreview, isSelecting, selectionStart, selectionBox, selectedIcons])
 
   useEffect(() => {
     const size = (6 * window.innerWidth) / 100
@@ -320,7 +362,7 @@ export default function Home() {
 
     if (isContextMenuOpen) return
 
-    setIsSelection(true)
+    setIsSelecting(true)
     setSelectionStart({x: e.clientX, y: e.clientY})
 
     setSelectionBox({
@@ -354,7 +396,8 @@ export default function Home() {
                 color: "white",
                 padding: "8px",
                 borderRadius: "6px",
-                width: `180px`
+                width: `180px`,
+                zIndex: 9999
               }}
             >
               {contextMenus[contextMenu.type]?.map((item) => (
@@ -387,6 +430,7 @@ export default function Home() {
                 size={ICON_SIZE}
                 x={x}
                 y={y}
+                isSelected={selectedIcons.includes(icon.id)}
                 onMouseDown={(e) => {
                   e.stopPropagation()
                   handleMouseDown(icon.id, e)
@@ -414,6 +458,22 @@ export default function Home() {
                 border: " 2px solid rgba(255,255,255,0.6) ",
                 background: "rgba(255,255,255,0.1)",
                 pointerEvents: "none"
+              }}
+            />
+          )}
+
+          {selectionBox && isSelecting && (
+            <div
+              style={{
+                position: "absolute",
+                left: selectionBox.x,
+                top: selectionBox.y,
+                width: selectionBox.width,
+                height: selectionBox.height,
+                background: "rgba(0,120,255,0.2)",
+                border: "1px solid rgba(0,120,255,0.8)",
+                pointerEvents: "none",
+                zIndex: 999
               }}
             />
           )}

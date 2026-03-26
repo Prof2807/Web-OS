@@ -11,6 +11,14 @@ const Desktop = forwardRef(({ children , onMouseMove , onMouseUp, onAction, onCo
     if (onClick) onClick()
   }
 
+  const handleMouseDown = (e) => {
+    if (e.button !== 0) return
+
+    if (onStartSelection) {
+      onStartSelection(e)
+    }
+  }
+
   const handleAction = (action) => {
 
     if (onAction) {
@@ -34,15 +42,7 @@ const Desktop = forwardRef(({ children , onMouseMove , onMouseUp, onAction, onCo
       onContextMenu={handleRightClick}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
-      onMouseDown={(e) => {
-        if (e.button !== 0) return
-
-        if (e.target !== e.currentTarget) return
-
-        if (onStartSelection) {
-          onStartSelection(e)
-        }
-      }}
+      onMouseDown={handleMouseDown}
       style={{
         position: "relative",
         width: "100vw",

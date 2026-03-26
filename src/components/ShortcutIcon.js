@@ -2,7 +2,7 @@
 
 import { useState , useRef, useEffect } from "react"
 
-export default function ShortcutIcon({ icon, name, x, y, size, onMouseDown, onContextMenu, isRenaming, renameValue, setRenameValue, onRenameSubmit }) {
+export default function ShortcutIcon({ icon, isSelected,name, x, y, size, onMouseDown, onContextMenu, isRenaming, renameValue, setRenameValue, onRenameSubmit }) {
 
   const inputRef = useRef(null)
 
@@ -23,7 +23,10 @@ export default function ShortcutIcon({ icon, name, x, y, size, onMouseDown, onCo
         top: y ?? 0,
         left: x ?? 0,
         width: size,
-        height: size
+        height: size,
+
+        outline: isSelected ? "2px solid #4da3ff" : "none",
+        background: isSelected ? "rgba(0,120,255,0.2)" : "transparent"
       }}
     >
       {/* limit the icon height so the label isn’t covered */}

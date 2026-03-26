@@ -13,7 +13,8 @@ export default function ConextMenu() {
                     color: "white",
                     padding: "8px",
                     borderRadius: "6px",
-                    width: "180px"
+                    width: "180px",
+                    zIndex: 99
                 }}
                 >
                 <div onClick={() => handleAction("new-file")} className="p-2 hover:bg-gray-700 cursor-pointer">New File</div>
