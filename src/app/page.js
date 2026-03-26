@@ -23,6 +23,9 @@ export default function Home() {
   const [snappedPreview, setSnappedPreview] = useState(null)
   const [icons, setIcons] = useState([])
   const draggingRef = useRef(null)
+  const [ draggingIds, setDraggingIds ] = useState([])
+  const [ initialPositions, setInitialPositions ] = useState({})
+  const [ draggingPreview, setDraggingPreview ] = useState(null)
 
   const [isSelecting, setIsSelecting] = useState(false)
   const [selectionStart, setSelectionStart] = useState({ x: 0, y: 0 })
@@ -31,15 +34,35 @@ export default function Home() {
 
   const handleMouseDown = (id, e) => {
     if (isContextMenuOpen) return
-    draggingRef.current = id
+
+    let dragIds = []
+
+    if (selectedIcons.includes(id)) {
+      dragIds = selectedIcons
+    } else {
+      dragIds = [id]
+      setSelectedIcons([id])
+    }
+
+    setDraggingIds(dragIds)
+    draggingRef.current = dragIds
+
+    const positions = {}
+    dragIds.forEach(iconId => {
+      const icon = icons.find(i => i.id === iconId)
+      if (!icon) return
+      positions[iconId] = { gridX: icon.gridX, gridY: icon.gridY }
+    })
+
+    setInitialPositions(positions)
+
+    const mainIcon = icons.find(icon => icon.id === id) 
+    if (!mainIcon) return
+
     setDraggingIconId(id)
 
-    const icon = icons.find(icon => icon.id === id)
-
-    if (!icon) return
-
-    const iconX = icon.gridX * GRID_SIZE + (GRID_SIZE - ICON_SIZE) / 2
-    const iconY = icon.gridY * GRID_SIZE + (GRID_SIZE - ICON_SIZE) / 2
+    const iconX = mainIcon.gridX * GRID_SIZE + (GRID_SIZE - ICON_SIZE) / 2
+    const iconY = mainIcon.gridY * GRID_SIZE + (GRID_SIZE - ICON_SIZE) / 2
 
     let offsetX = e.clientX - iconX
     let offsetY = e.clientY - iconY
@@ -92,41 +115,150 @@ export default function Home() {
     const iconX = e.clientX - dragOffset.x
     const iconY = e.clientY - dragOffset.y
 
+    let anchorGridX = Math.round(iconX / GRID_SIZE)
+    let anchorGridY = Math.round(iconY / GRID_SIZE)
+
+    const start = initialPositions[draggingIconId]
+
+
+    const deltaX = anchorGridX - start.gridX
+    const deltaY = anchorGridY - start.gridY
+
+
+    if (isNaN(anchorGridX) || isNaN(anchorGridY)) return
+
+    // const occupied = new Set()
+
+    // icons.forEach(icon => {
+    //   if (!draggingRef.current.includes(icon.id)) {
+    //     occupied.add(`${icon.gridX}-${icon.gridY}`)
+    //   }
+    // })
+
+    // const finalUpdates = []
+
+    // draggingPreview.forEach(u => {
+    //   let { gridX, gridY } = u
+
+
+    //   const maxCols = Math.floor((desktopSize.width - ICON_SIZE) / GRID_SIZE)
+    //   const maxRows = Math.floor((desktopSize.height - ICON_SIZE) / GRID_SIZE)
+
+    //   anchorGridX = Math.max(0, Math.min(anchorGridX, maxCols))
+    //   anchorGridY = Math.max(0, Math.min(anchorGridY, maxRows))
+
+    //   let key = `${gridX}-${gridY}`
+
+    //   if (occupied.has(key)) {
+    //     let found = false
+
+    //     for (let dx = -2; dx <= 2 && !found; dx++) {
+    //       for (let dy = -2; dy <= 2 && !found; dy++) {
+    //         const nx = gridX + dx
+    //         const ny = gridY + dy
+    //         const newKey = `${nx}-${ny}`
+
+    //         if (
+    //           nx >= 0 && ny >= 0 &&
+    //           nx <= maxCols && ny <= maxRows &&
+    //           !occupied.has(newKey)
+    //         ) {
+    //           gridX = nx
+    //           gridY = ny
+    //           key = newKey
+    //           found = true
+    //         }
+    //       }
+    //     }
+
+    //     if (!found) {return }
+    //   }
+
+    //   occupied.add(key)
+
+    //   finalUpdates.push({
+    //     id: u.id,
+    //     gridX,
+    //     gridY
+    //   })
+
+    // })
+
+    const updates = []
+
+    draggingRef.current.forEach(id => {
+      const start = initialPositions[id]
+      if (!start) return
+
+      const newX = start.gridX + deltaX
+      const newY = start.gridY + deltaY
+
+      updates.push({
+        id,
+        gridX: newX,
+        gridY: newY
+      })
+    })
+
+    const finalUpdates = []
+
+    const occupied = new Set()
+
+    icons.forEach(icon => {
+      if (!draggingRef.current.includes(icon.id)) {
+        occupied.add(`${icon.gridX}-${icon.gridY}`)
+      }
+    })
+
     const maxCols = Math.floor((desktopSize.width - ICON_SIZE) / GRID_SIZE)
     const maxRows = Math.floor((desktopSize.height - ICON_SIZE) / GRID_SIZE)
 
-    let gridX = Math.round(iconX / GRID_SIZE)
-    let gridY = Math.round(iconY / GRID_SIZE)
+    updates.forEach(u => {
+      let { gridX, gridY } = u
 
-    gridX = Math.max(0, Math.min(gridX, maxCols))
-    gridY = Math.max(0, Math.min(gridY, maxRows))
+      gridX = Math.max(0, Math.min(gridX, maxCols))
+      gridY = Math.max(0, Math.min(gridY, maxRows))
 
-    if (isNaN(gridX) || isNaN(gridY)) return
+      let key = `${gridX}-${gridY}`
 
-    const currentIcon = icons.find(i => i.id === draggingRef.current)
-    if (!currentIcon) return
+      if (occupied.has(key)) {
+        let found = false
 
-    if (currentIcon.gridX !== gridX || currentIcon.gridY !== gridY) {
+        for (let dx = -2; dx <= 2 && !found; dx++) {
+          for (let dy = -2; dy <= 2 && !found; dy++) {
 
-      if (IconManager.isCellOccupied(gridX, gridY)) return
+            const nx = gridX + dx
+            const ny = gridY + dy 
 
-      IconManager.updateIconPosition(currentIcon.id, gridX, gridY)
+            const newKey = `${nx}-${ny}`
 
-      setIcons([...IconManager.getIcons()])
+            if (
+              nx >= 0 && ny >= 0 &&
+              nx <= maxCols && ny <= maxRows &&
+              !occupied.has(newKey)
+            ) {
+              gridX = nx
+              gridY = ny
+              key = newKey
+              found = true
+            }
+          }
+        }
 
-      StorageManager.updateItem(currentIcon.id, {
+        if (!found) return
+      }
+
+      occupied.add(key)
+
+      finalUpdates.push({
+        id: u.id,
         gridX,
         gridY
       })
-
-    }
-
-    setSnappedPreview({
-      gridX,
-      gridY,
-      x: gridX * GRID_SIZE,
-      y: gridY * GRID_SIZE
     })
+
+    setDraggingPreview(finalUpdates)
+    setSnappedPreview(null)
   }
 
   const handleMouseUp = () => {
@@ -137,10 +269,25 @@ export default function Home() {
       return
     }
 
-    if (!draggingRef.current || !snappedPreview) return
+    if (!draggingRef.current || !draggingPreview || draggingPreview.length === 0) return
 
-    setIcons([...IconManager.getIcons()])
 
+    if (draggingPreview && draggingPreview.length > 0) {
+
+      draggingPreview.forEach(u => {
+        IconManager.updateIconPosition(u.id, u.gridX, u.gridY)
+
+        StorageManager.updateItem(u.id, {
+          gridX: u.gridX,
+          gridY: u.gridY
+        })
+      })
+
+      setIcons([...IconManager.getIcons()])
+    }
+
+    setDraggingPreview(null)
+    setDraggingIds([])
     setDraggingIconId(null)
     draggingRef.current = null
     setSnappedPreview(null)
@@ -161,7 +308,7 @@ export default function Home() {
       window.removeEventListener("mousemove", move)
       window.removeEventListener("mouseup", up)
     }
-  }, [draggingIconId, dragOffset, snappedPreview, isSelecting, selectionStart, selectionBox, selectedIcons])
+  }, [draggingIconId, dragOffset, snappedPreview, isSelecting, selectionStart, selectionBox, selectedIcons, draggingPreview, draggingIds, initialPositions])
 
   useEffect(() => {
     const size = (6 * window.innerWidth) / 100
@@ -414,8 +561,13 @@ export default function Home() {
 
           {icons.map(icon => {
 
-            let x = icon.gridX * GRID_SIZE + (GRID_SIZE - ICON_SIZE) / 2
-            let y = icon.gridY * GRID_SIZE + (GRID_SIZE - ICON_SIZE) / 2
+            const preview = draggingPreview?.find(p => p.id === icon.id) 
+
+            let gridX = preview ? preview.gridX : icon.gridX
+            let gridY = preview ? preview.gridY : icon.gridY
+
+            let x = gridX * GRID_SIZE + (GRID_SIZE - ICON_SIZE) / 2
+            let y = gridY * GRID_SIZE + (GRID_SIZE - ICON_SIZE) / 2
 
             if (draggingIconId === icon.id && snappedPreview) {
               x = snappedPreview.x + (GRID_SIZE - ICON_SIZE) / 2
@@ -433,6 +585,19 @@ export default function Home() {
                 isSelected={selectedIcons.includes(icon.id)}
                 onMouseDown={(e) => {
                   e.stopPropagation()
+                  
+                  if (e.ctrlKey) {
+                    setSelectedIcons(prev => {
+                      if (prev.includes(icon.id)) {
+                        return prev.filter(id => id !== icon.id)
+                      } else {
+                        return [...prev, icon.id]
+                      }
+                    })
+                    return
+                  }
+
+                  setSelectedIcons([icon.id])
                   handleMouseDown(icon.id, e)
                 }}
                 onContextMenu={(e) => {
